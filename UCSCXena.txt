@@ -1,0 +1,79 @@
+#===================data processing===============
+library(impute)
+file = read.table("Matrix.txt" , sep="\t", header=T, check.names=F, row.names=1)
+file = as.matrix(file)
+impute_data = impute.knn(file)
+file_impute = impute_data$data
+#==================differential expression========
+geneName = "DLX4"
+CancerName = "COADREAD"
+data = read.table(paste0("Expression.",geneName,".zscore.txt"),sep="\t",header=T,check.names=F)
+data = data[data$CancerType == CancerName,]
+data[,"geneName"] = as.numeric(unlist(data[,"geneName"]))
+data = na.omit(data)
+p = wilcox.test(data[which(data$Type == "Normal"),geneName],
+                data[which(data$Type == "Tumor"),geneName])$p.value
+#=================================================
+library(limma)
+data = read.table("Matrix",sep="\t",header=TRUE,check.names=FALSE)
+data = as.matrix(data)
+rownames(data) = data[,1]
+data = data[,-1]
+class(data) = "numeric"
+data = log2(data+1)
+#=================================================
+geneName = "DLX4"
+data = read.table(paste0("Expression.",geneName,".zscore.txt"),sep="\t",header=T,check.names=F)  
+tumors = c("ESCA","STAD","COAD","READ",
+            "PAAD","LIHC",
+            "LUAD","LUSC",
+            "THCA","BRCA","PRAD",
+            "BLCA","KIRC","KIRP","KICH",
+            "CESC","UCEC",
+            "HNSC","GBM","PCPG","SARC")
+mydata1 = data[(data[,"CancerType"] %in% tumors),] 
+mydata1$expr = mydata1[,geneName]
+mydata1 = mydata1[mydata1$expr > -3,]
+mydata1 = mydata1[mydata1$expr < 3,]
+tumors2 = c()
+for (variable in unique(mydata1$CancerType)) {
+  sub_mydata1 = mydata1[mydata1$CancerType == variable,]
+  sub_mydata1_normal = sub_mydata1[sub_mydata1$Type == "Normal",]
+  if(length(unique(sub_mydata1$Type)) == 2 & nrow(sub_mydata1_normal) >= 3){
+    tumors2 = c(tumors2,variable)
+  }
+}
+mydata1 <- mydata1[(mydata1[,"CancerType"] %in% tumors2),]
+colnames(mydata1)[1] <- "Sample"
+pvalues <- sapply(mydata1$CancerType, function(x){
+  res <- wilcox.test(as.numeric(expr) ~ Type, 
+                     data = subset(mydata1, 
+                                   CancerType == x)
+                     ) 
+  res$p.value
+})
+pv <- data.frame(gene = mydata1$CancerType, 
+                 pvalue = pvalues)
+pv$sigcode <- cut(pv$pvalue, 
+                  c(0,0.0001, 0.001, 0.01, 0.05, 1),
+                  labels=c('****','***', '**', '*', ''))
+#=================================================
+wilcox_test_p <- sig <- c()
+for(i in CancerType) {
+  tmp <- data[which(data$CancerType == i),]
+  tumor <- tmp[which(tmp$tissue == "Paired_Tumor"),]
+  normal <- tmp[which(tmp$tissue == "Paired_Normal"),]
+  wp <- c(wp, wilcox.test(tumor$exp,
+                          normal$exp,
+                          paired = T)$p.value)
+  sig <- c(sig, as.character(cut(wilcox.test(t$exp,
+                                             n$exp,
+                                             paired = T)$p.value,
+                                 c(0,0.0001,0.001,0.01,0.05,1),
+                                 c("****","***","**","*","")
+                                 )
+                             )
+           )
+}
+names(wilcox_test_p) <- names(sig) <- unique(data$CancerType)
+wilcox_test_p

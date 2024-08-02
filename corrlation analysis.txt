@@ -1,0 +1,19 @@
+#DLX4&ZC3HC1
+gene1 = "DLX4" 
+gene2 = "ZC3HC1"
+
+CancerName = "COADREAD"
+data1 = read.table(paste0("expTime.",gene1,".txt"), header=T, sep="\t", check.names=F,row.names = 1)
+data2 = read.table(paste0("expTime.",gene2,".txt"), header=T, sep="\t", check.names=F,row.names = 1)
+samesample = intersect(rownames(data1),rownames(data2))
+data = cbind(data1[samesample,c(gene1,"CancerType"),drop=F],
+           data2[samesample,gene2,drop=F])
+data = as.data.frame(data)
+
+data = data[data$CancerType == CancerName,]
+r.cor <- cor(data[,gene1], 
+             data[,gene2],method = "pearson")
+r.cor
+p.cor <- cor.test(data[,gene1], 
+                  data[,gene2],method = "pearson")$p.value
+p.cor

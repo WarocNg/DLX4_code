@@ -1,0 +1,47 @@
+library(tidyverse)  
+library(AnnotationDbi) 
+
+load("CMAP_gene_signatures.RData")  
+camp_signature <- CMAP.genePerturbations %>%  
+  as.data.frame() %>%   
+  select(tstat) %>%   
+  rownames_to_column("rowname") %>%   
+  separate(rowname, into = c("NA", "ENTREZID"), sep = "\\.") %>%   
+  select(-NA)   
+
+SYMBOL <- bitr(camp_signature$ENTREZID,  
+               fromType = "ENTREZID",  
+               toType = "SYMBOL",  
+               OrgDb = org.Hs.eg.db)  
+
+camp_signature <- left_join(SYMBOL, camp_signature, by = "ENTREZID")  
+
+camp_signature <- camp_signature %>%  
+  rownames_to_column("old_rownames") %>%   
+  column_to_rownames(var = "SYMBOL") %>%  
+  select(-old_rownames)   
+
+eXtremeLogFC <- function(logFC_Matrix, N = 500) {  
+  numOfGenes <- nrow(logFC_Matrix)  
+  XLogFC <- logFC_Matrix %>%  
+    mutate(across(everything(), ~ {  
+      logFCOrder <- order(.)  
+      FC0 <- logFCOrder[(N+1):(numOfGenes-N)]  
+      replace(., FC0, 0)  
+    }))  
+  XLogFC  
+}  
+XLogFC = eXtremeLogFC(camp_signature, N = 500)
+XSum = data.frame(score = XSum(XLogFC, 
+                               Up_gene, 
+                               Down_gene)
+library(dplyr)  
+XSum <- XSum %>%  
+  mutate(  
+    max_pos = if_else(any(score > 0), max(score[score > 0]), NA_real_),  
+    min_neg = if_else(any(score < 0), min(score[score < 0]), NA_real_),  
+    score_pos = if_else(score > 0, score / max_pos, NA_real_),  
+    score_neg = if_else(score < 0, score / min_neg * -1, NA_real_)  
+  ) %>%  
+  mutate(score = if_else(is.na(score_pos), if_else(is.na(score_neg), score, score_neg), score_pos)) %>%  
+  select(-max_pos, -min_neg, -score_pos, -score_neg)

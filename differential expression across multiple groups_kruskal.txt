@@ -1,0 +1,18 @@
+genName = "DLX4"
+CancerName = "COADREAD"
+data = read.table(paste0("Expression.",genName,".zscore.txt"),sep="\t",header=T,check.names=F, row.names=1)  
+data = data[data$CancerType == CancerName,]
+tumorsample = rownames(data)[substr(rownames(data),14,14) == "0"]
+data = data[tumorsample,]
+Stage = read.table("pancancer.stage.txt", header=T, sep="\t", check.names=F, row.names=1)
+colnames(Stage)[1] = "Stage"
+samesamples=intersect(rownames(data),rownames(Stage))
+data = data[samesamples,,drop=F]
+Stage = Stage[samesamples,,drop=F]
+tmp = cbind(data[,genName,drop=F], Stage)
+tmp[,1] = as.numeric(unlist(tmp[,1]))
+tmp = na.omit(tmp) 
+tmp = as.data.frame(tmp)
+tmp$expression = tmp[,1]
+p = kruskal.test(expression ~ Stage, 
+                  data = tmp)$p.value

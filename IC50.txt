@@ -1,0 +1,42 @@
+Gene = "DLX4"
+library(limma)
+data = read.table(drugFile,sep="\t",header=T,check.names=F)
+data = as.matrix(data)
+rownames(data) = data[,1]
+drug = data[,2:ncol(data)]
+dimnames=  list(rownames(drug),colnames(drug))
+data = matrix(as.numeric(as.matrix(drug)),nrow=nrow(drug),dimnames=dimnames)
+rm(drug)
+data = impute.knn(data)
+drug =  data$data
+drug = avereps(drug)
+rm(data)
+data = read.table(expFile,sep="\t",header=T,check.names=F)
+data = as.matrix(data)
+rownames(data) = data[,1]
+exp = data[,2:ncol(data)]
+dimnames = list(rownames(exp),colnames(exp))
+data = matrix(as.numeric(as.matrix(exp)),nrow=nrow(exp),dimnames=dimnames)
+exp = avereps(data)
+rm(data)
+
+samesample = intersect(colnames(exp),colnames(drug))
+exp = exp[,samesample]
+drug = drug[,samesample]
+
+outTab = data.frame()
+x = as.numeric(exp[Gene,])
+
+for(Drug in row.names(drug)){
+  y = as.numeric(drug[Drug,])
+  corT = cor.test(x,y,method="spearman")
+  cor = corT$estimate
+  pvalue = corT$p.value
+  if(pvalue < 0.05){
+    outVector = cbind(Gene,
+                      Drug,
+                      cor,
+                      pvalue)
+    outTab = rbind(outTab,outVector)
+  }
+}

@@ -1,0 +1,33 @@
+#Gene
+geneName = "DLX4"
+#Cancertyoe
+CancerName = "COADREAD"
+minprop = 0.3
+
+library(survival)
+library(survminer)
+
+data = read.table(paste0("expTime.",geneName,".txt"), 
+                  header=T, 
+                  sep="\t", 
+                  check.names=F,
+                  row.names = 1)
+data$OS.time=data$OS.time/30   
+data = data[data$CancerType == CancerName,]
+bestcut <- surv_cutpoint(data,
+                         time = "OS.time",
+                         event = "OS",
+                         variables = geneName ,
+                         minprop = minprop) 
+cutoff <- bestcut$cutpoint[1,1]
+
+#cutoff <- median(data[,geneName])
+
+data$group <- factor(ifelse(data[,geneName] > cutoff,"High","Low"), 
+                     levels = c("High","Low")
+)
+diff=survdiff(Surv(OS.time, OS) ~ group,
+              data = rt1, 
+              na.action=na.exclude)
+
+pValue <- 1 - pchisq(diff$chisq, length(diff$n) - 1)

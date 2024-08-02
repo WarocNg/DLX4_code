@@ -1,0 +1,26 @@
+GeneList = c("MKI67","PDCD1","CD274")
+TCGA_Limma_Results <- read.csv("TCGA_Limma_Results.csv") 
+
+suppressPackageStartupMessages(library(clusterProfiler))
+suppressPackageStartupMessages(library(msigdbr))
+suppressPackageStartupMessages(library(DOSE))
+suppressPackageStartupMessages(library(enrichplot))
+colnames(TCGA_Limma_Results)[1] = "SYMBOL"
+TCGA_Limma_Results = TCGA_Limma_Results[,c(1,2)]
+
+TCGA_Limma_Results_sorted = TCGA_Limma_Results[order(TCGA_Limma_Results$logFC, decreasing = T),]
+symbol.fc = TCGA_Limma_Results_sorted$logFC
+names(symbol.fc) = TCGA_Limma_Results_sorted$SYMBOL
+
+GeneList = data.frame(GeneList)
+GeneList$term = "Custom"
+colnames(GeneList) <- c("gene","term")
+GeneList <- GeneList[,c(2,1),drop=F]
+
+GSEAterms <- GSEA(geneList = symbol.fc, 
+           TERM2GENE = GeneList, 
+           verbose = F,
+           minGSSize = 2, 
+           maxGSSize = 500, 
+           nPerm = 10000, 
+           pvalueCutoff = 1)

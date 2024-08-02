@@ -1,0 +1,40 @@
+CancerName = "COADREAD"
+geneName = "DLX4"
+
+suppressPackageStartupMessages(library(limma))
+
+data = read.table(paste0("/mnt/ExpBig/","Expression.Firehose.",CancerName,".txt"),sep="\t",header=TRUE,check.names=FALSE)
+data = as.matrix(data)
+rownames(data) = data[,1]
+data = data[,-1]
+class(data) = "numeric"
+
+tumorsample = colnames(data)[substr(colnames(data),14,14) == "0"]
+data = data[,tumorsample]
+
+Low = data[,data[geneName,] <= median(data[geneName,]),drop=F]
+High = data[,data[geneName,] > median(data[geneName,]),drop=F]
+data = cbind(Low,High)
+LowSampleNumber = ncol(Low)
+HighSampleNumber = ncol(High)
+
+Type = c(rep("con",LowSampleNumber),
+         rep("treat",HighSampleNumber)
+)
+design <- model.matrix(~0 + factor(Type))
+colnames(design) <- levels(factor(Type))
+rownames(design) <- colnames(data)
+design
+colnames(Low)
+colnames(High)
+contrast.matrix <- makeContrasts(treat-con, 
+                                 levels = design)
+fit <- lmFit(data, design)
+fit2 <- contrasts.fit(fit, contrast.matrix)
+fit2 <- eBayes(fit2)
+x <- topTable(fit2, coef = 1, 
+              n = Inf, 
+              adjust.method = "BH", 
+              sort.by = "P")
+head(x)
+write.csv(x, "TCGA_Limma_results.csv", quote = F)
